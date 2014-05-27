@@ -44,6 +44,15 @@ before_fork do |server, worker|
 end
 
 after_fork do |server, worker|
+
+  if defined?(Segment::Analytics)
+    ::Analytics = Segment::Analytics.new({
+      write_key: Figaro.env.segmentio_write_key,
+      on_error: Proc.new { |status, msg| puts msg }
+    })
+    ::Rails.logger.info('Initializing Segment.io Library')
+  end
+
   # the following is *required* for Rails + "preload_app true",
   #if defined?(ActiveRecord::Base)
   #  ActiveRecord::Base.establish_connection
@@ -54,11 +63,4 @@ after_fork do |server, worker|
   # and Redis.  TokyoCabinet file handles are safe to reuse
   # between any number of forked children (assuming your kernel
   # correctly implements pread()/pwrite() system calls)
-  #if defined?(Analytics)
-  #  Analytics.init({
-  #    secret: Settings.segment_io.try(:secret_key),
-  #    on_error: Proc.new { |status, msg| print msg }
-  #  })
-  #  ::Rails.logger.info('Initializing Segment.io Library')
-  #end
 end
