@@ -45,8 +45,8 @@ end
 
 after_fork do |server, worker|
 
-  if defined?(Segment::Analytics)
-    Segment::Analytics.new({
+  if defined?(::Segment::Analytics)
+    ::Analytics = ::Segment::Analytics.new({
       write_key: Figaro.env.segmentio_write_key,
       on_error: Proc.new { |status, msg| puts msg }
     })
