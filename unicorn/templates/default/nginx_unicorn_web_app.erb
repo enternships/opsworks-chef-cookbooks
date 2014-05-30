@@ -4,7 +4,17 @@ upstream unicorn_<%= @application[:domains].first %> {
 
 server {
   listen 80;
+  # Reverse proxy /blog to WPEngine
+  location /blog {
+        rewrite /(.*) /$1 break;
+        proxy_pass http://enternships.wpengine.com/;
+        proxy_redirect off;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+  location / {
   return 301 https://$host$request_uri;
+  }
 }
 
 <% if @application[:ssl_support] %>
@@ -12,7 +22,7 @@ server {
   listen   443;
   server_name <%= @application[:domains].join(" ") %> <%= node[:hostname] %>;
   access_log <%= node[:nginx][:log_dir] %>/<%= @application[:domains].first %>-ssl.access.log;
-  
+
   ssl on;
   ssl_certificate /etc/nginx/ssl/<%= @application[:domains].first %>.crt;
   ssl_certificate_key /etc/nginx/ssl/<%= @application[:domains].first %>.key;
@@ -27,6 +37,12 @@ server {
   <% if @application[:nginx] && @application[:nginx][:client_max_body_size] %>
     client_max_body_size <%= @application[:nginx][:client_max_body_size] %>;
   <% end %>
+
+  # Send https to http if blog
+  location /blog {
+       return 301 http://$host$request_uri;
+       break;
+  }
 
   location / {
     proxy_set_header X-Forwarded-Proto https;
