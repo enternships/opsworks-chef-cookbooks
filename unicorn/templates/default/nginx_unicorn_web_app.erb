@@ -2,28 +2,6 @@ upstream unicorn_<%= @application[:domains].first %> {
   server unix:<%= @application[:deploy_to]%>/shared/sockets/unicorn.sock fail_timeout=0;
 }
 
-# Redirect wayra subdomain to zones equivalent
-server {
-  listen 80;
-  server_name wayra.enternships.com;
-  location / {
-    return 301 https://enternships.com/zones/wayra-enternships;
-  }
-}
-server {
-  listen 443;
-  ssl on;
-  ssl_certificate /etc/nginx/ssl/<%= @application[:domains].first %>.crt;
-  ssl_certificate_key /etc/nginx/ssl/<%= @application[:domains].first %>.key;
-  <% if @application[:ssl_certificate_ca] -%>
-  ssl_client_certificate /etc/nginx/ssl/<%= @application[:domains].first %>.ca;
-  <% end -%>
-  server_name wayra.enternships.com;
-  location / {
-    return 301 https://enternships.com/zones/wayra-enternships;
-  }
-}
-
 server {
   listen 80;
   # Reverse proxy /blog to WPEngine
@@ -83,6 +61,30 @@ server {
   error_page 500 502 503 504 /500.html;
   location = /500.html {
     root <%= @application[:absolute_document_root] %>;
+  }
+}
+<% end %>
+
+# Redirect wayra subdomain to zones equivalent
+server {
+  listen 80;
+  server_name wayra.enternships.com;
+  location / {
+    return 301 https://enternships.com/zones/wayra-enternships;
+  }
+}
+<% if @application[:ssl_support] %>
+server {
+  listen 443;
+  ssl on;
+  ssl_certificate /etc/nginx/ssl/<%= @application[:domains].first %>.crt;
+  ssl_certificate_key /etc/nginx/ssl/<%= @application[:domains].first %>.key;
+  <% if @application[:ssl_certificate_ca] -%>
+  ssl_client_certificate /etc/nginx/ssl/<%= @application[:domains].first %>.ca;
+  <% end -%>
+  server_name wayra.enternships.com;
+  location / {
+    return 301 https://enternships.com/zones/wayra-enternships;
   }
 }
 <% end %>
