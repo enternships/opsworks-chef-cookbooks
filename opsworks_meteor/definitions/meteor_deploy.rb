@@ -119,21 +119,28 @@ define :meteor_deploy do
           next
         end
 
-        # Using the first domain to create ROOT_URL for Meteor
-        domain_name = deploy[:domains][0]
+        # Set domain_name from custom_env JSON to construct $ROOT_URL 
+        domain_name = deploy[:domain_name]
 
         if deploy[:ssl_support]
           protocol_prefix = "https://"
+          port = 443 
         else
           protocol_prefix = "http://"
+          port = 80
         end
 
         tmp_dir = "/tmp/meteor_tmp"
         repo_dir = "#{deploy[:deploy_to]}/shared/cached-copy"
+
+        # Set $MONGO_URL from custom_env JSON 
         mongo_url = app_config[:mongo_url]
 
         bash "Deploy Meteor" do
           code <<-EOH
+          # Install Demeteorizer
+          npm install -g demeteorizer
+
           # Reset the Meteor temp directory
           rm -rf #{tmp_dir}
           mkdir -p #{tmp_dir}
@@ -141,23 +148,26 @@ define :meteor_deploy do
           # Move files to the temp directory
           cp -R #{repo_dir}/. #{tmp_dir}
 
-          # Create a Meteor bundle
+          # Demeteorize app
           cd #{tmp_dir}
-          mrt install
-          meteor bundle bundled_app.tgz
-          tar -xzf bundled_app.tgz
+          demeteorizer -t app.tar.gz
 
-          # Copy the bundle folder into the release directory
-          cp -R #{tmp_dir}/bundle #{release_path}
-          chown -R deploy:www-data #{release_path}/bundle
-
-          # cd into release directory
+          # Copy the app archive to the release directory and uncompress
+          cp #{tmp_dir}/app.tar.gz #{release_path}
           cd #{release_path}
+          tar -xzvf app.tar.gz
+          
+          # Build npm dependencies
+          npm install
+
+          # Rename main.js to server.js for opsworks
+          mv main.js server.js
 
           # OpsWorks expects a server.js file
           echo 'process.env.ROOT_URL  = "#{protocol_prefix}#{domain_name}";' > ./server.js
           echo 'process.env.MONGO_URL = "#{mongo_url}";' >> ./server.js
-          echo 'process.env.PORT = 80; require("./bundle/main.js");' >> ./server.js
+          echo 'process.env.PORT = #{port};' >> ./server.js
+          echo 'require("./main.js");' >> ./server.js
           chown deploy:www-data ./server.js
 
           # Remove the temp directory
