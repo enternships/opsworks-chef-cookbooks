@@ -38,6 +38,11 @@ server {
     client_max_body_size <%= @application[:nginx][:client_max_body_size] %>;
   <% end %>
 
+  # Block malicious spiders
+  if ($http_user_agent ~ (EasouSpider|BLEXBot) ) {
+      return 403;
+  }
+
   # Send https to http if blog
   location /blog {
     return 301 http://$host$request_uri;
@@ -49,11 +54,6 @@ server {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header Host $http_host;
     proxy_redirect off;
-
-    # Block malicious spiders
-    if ($http_user_agent ~ (EasouSpider|BLEXBot) ) {
-        return 403;
-    }
 
     # If you don't find the filename in the static files
     # Then request it from the unicorn server
