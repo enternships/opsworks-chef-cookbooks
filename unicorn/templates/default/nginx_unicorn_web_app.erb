@@ -50,6 +50,11 @@ server {
     proxy_set_header Host $http_host;
     proxy_redirect off;
 
+    # Block malicious spiders
+    if ($http_user_agent ~ (EasouSpider|BLEXBot) ) {
+        return 403;
+    }
+
     # If you don't find the filename in the static files
     # Then request it from the unicorn server
     if (!-f $request_filename) {
